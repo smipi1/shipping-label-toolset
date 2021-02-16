@@ -110,7 +110,14 @@ PAGE_NUMBER=1
 
 ARGS=( "$@" )
 
-for IN_FILENAME in "${ARGS[@]}"; do
+for ARG in "${ARGS[@]}"; do
+    IFS=':' read -r IN_FILENAME IN_PAGE <<< "${ARG}"
+    if [ -n "${IN_PAGE}" ]; then
+        mkdir -p ${TMP2_DIR}
+        NEW_IN_FILENAME=${TMP2_DIR}/page_subset.pdf
+        pdftk ${IN_FILENAME} cat ${IN_PAGE} output - > ${NEW_IN_FILENAME} || error "${IN_FILENAME}: cannot extract page ${IN_PAGE}"
+        IN_FILENAME=${NEW_IN_FILENAME}
+    fi
     NUMBER=$(printf "%.8d" ${PAGE_NUMBER})
     echo -n "${NUMBER}: "
     OUT_FILENAME="${EU_DIR}/${NUMBER}.pdf"
