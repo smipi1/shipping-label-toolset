@@ -74,22 +74,22 @@ documentType() {
 }
 
 isShippingLabel() {
-    pdfgrep -q -P '(EXPRESS WORLDWIDE\n.*(ECX|WPX)|3SGHUB)' ${1}
+    pdfgrep -q -P '(EXPRESS WORLDWIDE\n.*(ECX|WPX)|3SGHUB)' "${1}"
 }
 
 isInternational() {
-    pdfgrep -q -P 'EXPRESS WORLDWIDE\n.*WPX' ${1}
+    pdfgrep -q -P 'EXPRESS WORLDWIDE\n.*WPX' "${1}"
 }
 
 isCommercialInvoiceFor() {
-    local IN_FILENAME=${1};shift
-    local ORDER_NUMBER=${1};shift
-    pdfgrep -q 'Commercial Invoice.*Shipment Reference: +'${ORDER_NUMBER}'.*Carrier: *DHL' ${IN_FILENAME}
+    local IN_FILENAME="${1}";shift
+    local ORDER_NUMBER="${1}";shift
+    pdfgrep -q 'Commercial Invoice.*Shipment Reference: +'${ORDER_NUMBER}'.*Carrier: *DHL' "${IN_FILENAME}"
 }
 
 dhlReference() {
-    local LABEL_FILENAME=${1};shift
-    pdfgrep '.*' ${LABEL_FILENAME} | awk '/^Ref: /{print $2}'
+    local LABEL_FILENAME="${1}";shift
+    pdfgrep '.*' "${LABEL_FILENAME}" | awk '/^Ref: /{print $2}'
 }
 
 dhlCommercialInvoice() {
@@ -111,7 +111,10 @@ PAGE_NUMBER=1
 ARGS=( "$@" )
 
 for ARG in "${ARGS[@]}"; do
+    echo "ARG=${ARG}"
     IFS=':' read -r IN_FILENAME IN_PAGE <<< "${ARG}"
+    echo "IN_FILENAME=${IN_FILENAME}"
+    echo "IN_PAGE=${IN_PAGE}"
     if [ -n "${IN_PAGE}" ]; then
         mkdir -p ${TMP2_DIR}
         NEW_IN_FILENAME=${TMP2_DIR}/page_subset.pdf
@@ -125,13 +128,13 @@ for ARG in "${ARGS[@]}"; do
         mkdir -p ${EU_DIR}
         echo -n "europe, empty page"
         createEmptyA6Page ${OUT_FILENAME}
-    elif isShippingLabel ${IN_FILENAME}; then
+    elif isShippingLabel "${IN_FILENAME}"; then
         echo -n "${IN_FILENAME}: "
-        if isInternational ${IN_FILENAME}; then
+        if isInternational "${IN_FILENAME}"; then
             mkdir -p ${INTL_DIR}
             OUT_FILENAME="${INTL_DIR}/${NUMBER}.pdf"
             echo -n "international"
-            ORDER_NUMBER=$(dhlReference ${IN_FILENAME}) || error "${IN_FILENAME}: cannot determine order number"
+            ORDER_NUMBER=$(dhlReference "${IN_FILENAME}") || error "${IN_FILENAME}: cannot determine order number"
             INVOICE=$(dhlCommercialInvoice ${ORDER_NUMBER}) || error "${IN_FILENAME}: cannot find commercial invoice for order number ${ORDER_NUMBER} in input files"
             echo -n ", ${INVOICE}: commercial invoice"
             mkdir -p ${TMP2_DIR}
