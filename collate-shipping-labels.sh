@@ -77,8 +77,8 @@ isShippingLabel() {
     pdfgrep -q -P '(EXPRESS WORLDWIDE\n.*(ECX|WPX)|3SGHUB)' "${1}"
 }
 
-isInternational() {
-    pdfgrep -q -P 'EXPRESS WORLDWIDE\n.*WPX' "${1}"
+isPaperlessTrade() {
+    pdfgrep -q -P '(EXPRESS WORLDWIDE\n.*(ECX|WPX(.|\n)*\nC[A-Z\-]*\-PLT[A-Z\-]*\n)|3SGHUB)' "${1}"
 }
 
 isCommercialInvoiceFor() {
@@ -126,25 +126,13 @@ for ARG in "${ARGS[@]}"; do
     OUT_FILENAME="${EU_DIR}/${NUMBER}.pdf"
     if [ "${IN_FILENAME}" = "-" ]; then
         mkdir -p ${EU_DIR}
-        echo -n "europe, empty page"
+        echo -n "empty page"
         createEmptyA6Page ${OUT_FILENAME}
     elif isShippingLabel "${IN_FILENAME}"; then
         echo -n "${IN_FILENAME}: "
-        if isInternational "${IN_FILENAME}"; then
-            mkdir -p ${INTL_DIR}
-            OUT_FILENAME="${INTL_DIR}/${NUMBER}.pdf"
-            echo -n "international"
-            ORDER_NUMBER=$(dhlReference "${IN_FILENAME}") || error "${IN_FILENAME}: cannot determine order number"
-            INVOICE=$(dhlCommercialInvoice ${ORDER_NUMBER}) || error "${IN_FILENAME}: cannot find commercial invoice for order number ${ORDER_NUMBER} in input files"
-            echo -n ", ${INVOICE}: commercial invoice"
-            mkdir -p ${TMP2_DIR}
-            NEW_IN_FILENAME=${TMP2_DIR}/$(basename "${OUT_FILENAME}")
-            pdfJam --paper a6paper --scale 0.9 --outfile ${NEW_IN_FILENAME}.label.pdf "${IN_FILENAME}" 1
-            pdfJam --paper a4paper --nup 2x2 --outfile ${NEW_IN_FILENAME}.labels.pdf ${NEW_IN_FILENAME}.label.pdf ${NEW_IN_FILENAME}.label.pdf
-            pdfJam --paper a4paper --outfile ${OUT_FILENAME} ${NEW_IN_FILENAME}.labels.pdf ${INVOICE} ${INVOICE}
-        else
+        if isPaperlessTrade "${IN_FILENAME}"; then
             mkdir -p ${EU_DIR}
-            echo -n "europe"
+            echo -n "paperless trade"
             PAGE_SIZE=$(pdfPageSize "${IN_FILENAME}") || (echo; error "${IN_FILENAME}: cannot determine page size of pdf")
             if [ "${PAGE_SIZE}" = "A4" ]; then
                 echo -n ", trim upper right A6 from A4"
@@ -161,6 +149,18 @@ for ARG in "${ARGS[@]}"; do
                 pdfJam --paper a6paper --scale 0.9 --angle 90 --outfile ${OUT_FILENAME} "${IN_FILENAME}" 1
             fi
             echo -n ", scale to 90%"
+        else
+            mkdir -p ${INTL_DIR}
+            OUT_FILENAME="${INTL_DIR}/${NUMBER}.pdf"
+            echo -n "paper trade"
+            ORDER_NUMBER=$(dhlReference "${IN_FILENAME}") || error "${IN_FILENAME}: cannot determine order number"
+            INVOICE=$(dhlCommercialInvoice ${ORDER_NUMBER}) || error "${IN_FILENAME}: cannot find commercial invoice for order number ${ORDER_NUMBER} in input files"
+            echo -n ", ${INVOICE}: commercial invoice"
+            mkdir -p ${TMP2_DIR}
+            NEW_IN_FILENAME=${TMP2_DIR}/$(basename "${OUT_FILENAME}")
+            pdfJam --paper a6paper --scale 0.9 --outfile ${NEW_IN_FILENAME}.label.pdf "${IN_FILENAME}" 1
+            pdfJam --paper a4paper --nup 2x2 --outfile ${NEW_IN_FILENAME}.labels.pdf ${NEW_IN_FILENAME}.label.pdf ${NEW_IN_FILENAME}.label.pdf
+            pdfJam --paper a4paper --outfile ${OUT_FILENAME} ${NEW_IN_FILENAME}.labels.pdf ${INVOICE} ${INVOICE}
         fi
     else
         echo -n "${IN_FILENAME}: skipped"
