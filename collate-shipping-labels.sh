@@ -78,7 +78,7 @@ isShippingLabel() {
 }
 
 isPaperlessTrade() {
-    pdfgrep -q -P '(EXPRESS WORLDWIDE\n.*(ECX|WPX(.|\n)*\nC[A-Z\-]*\-PLT[A-Z\-]*\n)|3SGHUB)' "${1}"
+    pdfgrep -q -P '(EXPRESS WORLDWIDE\n.*(ECX|WPX(.|\n)*\nC[A-Z\-]*\-PLT)|3SGHUB)' "${1}"
 }
 
 isCommercialInvoiceFor() {
